@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Localization;
 
 public class PlayerControl : MonoBehaviour
 {
@@ -11,14 +12,12 @@ public class PlayerControl : MonoBehaviour
     CharacterController controller;
     public Transform flashlight;
 
-    Text uiText;
+    Text objectText;
 
     [Range(5f, 70f)]
     public float mouseSensitivity = 60f;
     [Range(1f, 10f)]
     public float movementSpeed = 1f;
-
-    public LayerMask groundLayer;
 
     Inventory inventory;
 
@@ -30,12 +29,17 @@ public class PlayerControl : MonoBehaviour
     float gravity = -9.8f;
     public bool grounded;
 
-    Vector3 movement;
+    public Vector3 movement;
     Vector3 velocity;
     const float SPACE = -2f;
     public float jumpHeight = 0.3f;
 
+    public LayerMask itemsLayer;
+    public LayerMask groundLayer;
+
     public const float PICKUP_DISTANCE = 3f;
+
+    bool moving = false;
 
     void Awake()
     {
@@ -47,12 +51,22 @@ public class PlayerControl : MonoBehaviour
         speech = transform.Find("Speech").GetComponent<AudioSource>();
         groundChecker = transform.Find("GroundChecker");
         defaultVolume = footsteps.volume;
-        uiText = GameObject.Find("ObjectStatus").GetComponent<Text>();
+        objectText = GameObject.Find("ObjectStatus").GetComponent<Text>();
         inventory = GetComponent<Inventory>();
+    }
+
+    private void Start()
+    {
+    }
+
+    private void OnControllerColliderHit(ControllerColliderHit hit)
+    {
+        if (hit.transform.CompareTag("Trigger") && moving) hit.transform.GetComponent<Bottle>().Bump(movement);
     }
 
     void Update()
     {
+        Debug.Log(controller.velocity.magnitude);
         grounded = Physics.CheckSphere(groundChecker.position, 0.3f, groundLayer);
 
         movement = transform.right * Input.GetAxis("Horizontal") + transform.forward * Input.GetAxis("Vertical");
@@ -60,10 +74,12 @@ public class PlayerControl : MonoBehaviour
 
         if (new Vector3(controller.velocity.x, 0f, controller.velocity.z).magnitude > 0f && grounded)
         {
+            moving = true;
             footsteps.volume = defaultVolume;
             if (!footsteps.isPlaying) footsteps.Play();
         }
         else if (footsteps.isPlaying) {
+            moving = false;
             if (footsteps.volume > 0) footsteps.volume -= Time.deltaTime * 2.5f;
             else footsteps.Pause();
         }
@@ -95,20 +111,17 @@ public class PlayerControl : MonoBehaviour
         RaycastHit hit;
         Ray ray = _camera.GetComponent<Camera>().ScreenPointToRay(new Vector2(Screen.width / 2, Screen.height / 2));
 
-        if (Physics.Raycast(ray, out hit, LayerMask.NameToLayer("Items"))) {
-            if (hit.transform && hit.transform.tag == "Item" && Vector3.Distance(hit.transform.position, transform.position) < PICKUP_DISTANCE)
+        if (Physics.Raycast(ray, out hit, PICKUP_DISTANCE, itemsLayer))
+        {
+            Item item = hit.transform.GetComponent<Item>();
+            objectText.gameObject.SetActive(true);
+            objectText.text = item.displayName.GetLocalizedString();
+            if (Input.GetMouseButtonDown(0))
             {
-                Item item = hit.transform.GetComponent<Item>();
-                uiText.gameObject.SetActive(true);
-                uiText.text = item.displayName;
-                if (Input.GetMouseButtonDown(0))
-                {
-                    speech.PlayOneShot(item.speech);
-                    item.PickUp(inventory);
-                }
+                speech.PlayOneShot(item.speech);
+                if (item.pickable) item.PickUp(inventory);
             }
-            else uiText.gameObject.SetActive(false);
         }
-
+        else objectText.gameObject.SetActive(false);
     }
 }

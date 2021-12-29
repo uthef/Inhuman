@@ -5,7 +5,7 @@ TagManager:
   serializedVersion: 2
   tags:
   - Canvas
-  - Item
+  - Trigger
   layers:
   - Default
   - TransparentFX
@@ -14,9 +14,9 @@ TagManager:
   - Water
   - UI
   - Items
-  - 
-  - 
-  - 
+  - Wall
+  - Triggers
+  - Player
   - 
   - 
   - 
