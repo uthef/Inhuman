@@ -15,6 +15,4 @@
 - Платформа: Windows
 - Дополнительные пакеты:
     - High Definition RP
-
-
-
+    - Localization
